@@ -12,9 +12,11 @@ REDBEAN=${PROJECT}.com
 REDBEAN_VERSION=2.2
 # leave empty for default, or use one of tiny-, asan-, original-, static-, unsecure-, original-tinylinux-
 # asan mode currently not working on M1 Macs
-#REDBEAN_MODE=
-REDBEAN_MODE=asan-
-REDBEAN_DL=https://redbean.dev/redbean-${REDBEAN_MODE}${REDBEAN_VERSION}.com
+# REDBEAN_MODE=
+# REDBEAN_DL=https://redbean.dev/redbean-${REDBEAN_MODE}${REDBEAN_VERSION}.com
+
+# Use the nightly build for the latest features
+REDBEAN_DL=https://cosmo.zip/pub/cosmos/bin/redbean
 
 SQLITE3=sqlite3.com
 SQLITE3_DL=https://redbean.dev/sqlite3.com
@@ -64,6 +66,9 @@ ls: ${UNZIP}
 
 log: ${PROJECT}.log
 	tail -f ${PROJECT}.log
+
+dev: ${REDBEAN}
+	find srv/ | entr ./${REDBEAN}.template -vv -D srv/
 
 start: ${REDBEAN}
 	./${REDBEAN} -vv

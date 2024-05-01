@@ -1,29 +1,192 @@
-<!doctype html>
-<meta charset="utf-8">
-<title>redbean</title>
-<link rel="stylesheet" href="redbean.css">
-<img src="/redbean.png" class="logo" width="84" height="84">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Upload</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* General body and paragraph settings */
+      body {
+        font-family: "Roboto", sans-serif;
+        font-size: 18px;
+        line-height: 1.6;
+        color: #333;
+        padding: 20px;
+        background: #f5f5f5;
+        max-width: 800px;
+        margin: auto;
+      }
 
-<h2>
-  <big>redbean</big><br>
-  <small>distributable static web server</small>
-</h2>
+      header,
+      footer {
+        text-align: center;
+        margin: 10px 0;
+      }
 
-<p>
-  Here's what you need to know about redbean:
+      h1,
+      h2,
+      h3 {
+        font-family: "Merriweather", serif;
+      }
 
-<ul>
-<li>million qps on modern pc
-<li>container is executable zip file
-<li>userspace filesystem w/o syscall overhead
-<li>kernelspace zero-copy gzip encoded responses
-<li>executable runs on linux, bsd, mac, and windows
-</ul>
+      h1 {
+        font-size: 32px;
+        color: #333;
+      }
 
-<p>
-  redbean is based on <a href="https://justine.storage.googleapis.com/ape.html">αcτµαlly pδrταblε εxεcµταblε</a>
-  and <a href="https://github.com/jart/cosmopolitan">cosmopolitan</a>.
-  <br>
-  redbean is authored by Justine Tunney who's on
-  <a href="https://github.com/jart">GitHub</a> and
-  <a href="https://twitter.com/JustineTunney">Twitter</a>.
+      h2 {
+        font-size: 24px;
+        color: #555;
+      }
+
+      h3 {
+        font-size: 20px;
+        color: #666;
+        margin-top: 30px;
+      }
+
+      p {
+        margin: 20px 0;
+        font-size: 14px;
+      }
+
+      /* make links black with no underline */
+      a {
+        color: #000;
+        text-decoration: none;
+      }
+
+      /* Design footer */
+      footer {
+        font-size: 14px;
+        color: #666;
+        text-align: center;
+      }
+
+      /* Adds padding around sections for cleaner segmenting */
+      section {
+        background: #fff;
+        padding: 20px;
+        box-shadow: 0 2px 5px #ccc;
+        margin-bottom: 20px;
+      }
+      audio {
+        width: 800px;
+        top: 0;
+        position: fixed;
+        height: 50px;
+      }
+    </style>
+  </head>
+  <body>
+    <audio controls>
+      <source src="/output.wav" type="audio/wav" />
+    </audio>
+    <header>
+      <h1>Summarize Meeting</h1>
+    </header>
+    <main id="app">
+      <input type="file" @change="handleFileUpload" />
+      <button @click="uploadFile">Upload</button>
+      <div v-if="uploading">Uploading...</div>
+      <div v-if="uploadSuccess">Upload Successful!</div>
+      <div v-if="uploadError">Upload Failed!</div>
+      <article>
+        <section v-html="transcript" @click="seekAudio"></section>
+      </article>
+    </main>
+    <footer></footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script>
+      new Vue({
+        el: "#app",
+        data: {
+          file: null,
+          transcript: "",
+          uploading: false,
+          uploadSuccess: false,
+          uploadError: false,
+        },
+        created() {
+          this.fetchTranscript();
+        },
+        methods: {
+          seekAudio(e) {
+            const timecode = e.target.dataset.timecode;
+            const audio = document.querySelector("audio");
+            const [hours, minutes, seconds] = timecode
+              .split(":")
+              .map(parseFloat);
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            audio.currentTime = totalSeconds;
+            console.log("Seeking to", totalSeconds);
+            //audio.play();
+            return false;
+          },
+          async fetchTranscript() {
+            const response = await fetch("/output.txt");
+            let transcriptWithTC = await response.text();
+            // Remove timecodes from the transcript [00:09:06.400 --> 00:09:11.160] to [00:09:06.400]
+            let transcriptLines = transcriptWithTC.replace(
+              /\[(.*?) -->.*?\]/g,
+              "[$1]"
+            );
+
+            // Add links around timestamps that can be clicked to play the audio at that point
+            transcriptLines = transcriptLines.replace(
+              /\[(\d{2}:\d{2}:\d{2}\.\d{3})\]/g,
+              '[<span data-timecode="$1">$1</span>]'
+            );
+
+            // wrap each line in a paragraph
+            this.transcript = transcriptLines
+              .split("\n")
+              .map((line) => `<p>${line}</p>`)
+              .join("");
+          },
+          handleFileUpload(event) {
+            this.file = event.target.files[0];
+          },
+          uploadFile() {
+            if (!this.file) {
+              alert("Please select a file to upload");
+              return;
+            }
+
+            this.uploading = true;
+
+            const formData = new FormData();
+            formData.append("file", this.file);
+
+            fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            })
+              .then((response) => {
+                if (response.ok) {
+                  this.uploadSuccess = true;
+                  this.uploadError = false;
+                } else {
+                  this.uploadError = true;
+                  this.uploadSuccess = false;
+                }
+                this.uploading = false;
+                this.fetchTranscript();
+              })
+              .catch((error) => {
+                console.error("Error uploading file:", error);
+                this.uploadError = true;
+                this.uploadSuccess = false;
+                this.uploading = false;
+              });
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
