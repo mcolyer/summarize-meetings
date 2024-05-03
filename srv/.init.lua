@@ -10,7 +10,7 @@ fm.setRoute({"/api/upload", method = "POST"}, function(r)
   if r.params.multipart.file then
     Barf("input", r.params.multipart.file.data)
     os.remove("output.wav")
-    os.execute("ffmpeg -i input -ar 16000 -ac 1 -c:a pcm_s16le srv/output.wav")
+    os.execute("ffmpeg -i input -ar 16000 -ac 1 -y -c:a pcm_s16le srv/output.wav")
     local handle = io.popen("brew --prefix whisper-cpp")
     local whisper_path = handle:read("*a")
     handle:close()
