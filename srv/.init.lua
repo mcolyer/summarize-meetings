@@ -7,6 +7,11 @@ ProgramMaxPayloadSize(1024 * 1024 * 500)
 
 fm.setRoute("/", "/index.html")
 fm.setRoute({"/api/upload", method = "POST"}, function(r)
+  -- TODO: Install ffmpeg and whisper-cpp
+  -- TODO: Download ggm-small.en.bin if it doesn't exist
+  -- TODO: Make it cross-platform
+  -- TODO: Don't save output to srv/ folder, refactor `make dev` to compress in the latest files
+  -- TODO: Add an audio speed option
   if r.params.multipart.file then
     Barf("input", r.params.multipart.file.data)
     os.remove("output.wav")
